@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.env
+.env.local
+
+# Output file
+file_tree_structure.md
+
+# Temporary files
+*.swp
+*.swo
+*~

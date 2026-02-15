@@ -1,0 +1,7 @@
+Please analyze this file and provide:
+
+1. A concise explanation of the file's purpose and content (in a field called "explication")
+2. Key features or functionality this file provides
+3. Any important technical details or dependencies
+
+Focus on clarity and relevance. Keep explanations brief and to the point.
