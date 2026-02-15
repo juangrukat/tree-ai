@@ -1,7 +1,6 @@
 Please analyze this file and provide:
 
-1. A concise explanation of the file's purpose and content (in a field called "explication")
-2. Key features or functionality this file provides
-3. Any important technical details or dependencies
+1. A concise explanation of the file's purpose, sections, and content (in a field called "explication")
 
 Focus on clarity and relevance. Keep explanations brief and to the point.
+Do Not Make additional Comments, or remarks. Focus solely on the contents of the file.

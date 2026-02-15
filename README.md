@@ -19,6 +19,7 @@ tree ai walks through your project directory, generates a visual tree of the fil
 - **Configurable** — Exclude hidden files, specific patterns, or directories
 - **Structured Output** — JSON-formatted AI responses for easy parsing
 - **Rate Limiting** — Configurable delay between API calls to respect limits
+- **Crash Recovery** — If interrupted, simply re-run the command to resume where you left off
 
 ## Quick Start
 
@@ -168,9 +169,55 @@ File Contents:
 +++
 ```
 
+## Crash Recovery
+
+tree ai automatically saves progress to a hidden `.tree-ai/` folder. If the process is interrupted (power failure, internet drop, Ctrl+C), simply re-run the command and it will resume where it left off.
+
+The checkpoint folder contains:
+- `checkpoint.json` — Progress state and file statuses
+- `results/` — Individual analysis results for each file
+
+Progress is saved after each file is processed, ensuring minimal work is lost on interruption.
+
+### How It Works
+
+```bash
+# First run - starts from scratch
+$ python analyze_folder.py ~/Projects/my-app
+Found 100 files to analyze
+Analyzing file 1/100: src/main.py
+Analyzing file 2/100: src/utils.py
+... (interrupted)
+
+# Re-run - automatically resumes
+$ python analyze_folder.py ~/Projects/my-app
+Found 100 files to analyze
+Loading previous progress... 45 files already completed
+Analyzing file 46/100: src/models.py
+...
+```
+
+### Configuration
+
+The checkpoint folder can be configured in `config.json`:
+
+```json
+{
+  "output": {
+    "filename": "file_tree_structure.md",
+    "checkpoint_folder": ".tree-ai",
+    "cleanup_checkpoint": true
+  }
+}
+```
+
+- `checkpoint_folder` — Name of the hidden folder (default: `.tree-ai`)
+- `cleanup_checkpoint` — Remove checkpoint after successful completion (default: `true`)
+
 ## Project Files
 
 - `analyze_folder.py` — Main analysis script
+- `checkpoint.py` — Checkpoint management for crash recovery
 - `config.json` — Configuration file
 - `prompt.txt` — Analysis prompt template
 - `requirements.txt` — Python dependencies

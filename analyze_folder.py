@@ -20,6 +20,16 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import fnmatch
 
+# Import checkpoint module for crash recovery
+from checkpoint import (
+    init_checkpoint,
+    get_completed_files,
+    save_file_result,
+    mark_completed,
+    cleanup_checkpoint,
+    get_progress
+)
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -258,22 +268,46 @@ def main():
                 
             files_to_analyze.append(file_path)
     
-    # Analyze files
-    print(f"Found {len(files_to_analyze)} files to analyze")
-    analysis_results = {}
+    # Check for existing checkpoint and load completed files
+    checkpoint_folder = config["output"].get("checkpoint_folder", ".tree-ai")
+    completed_files, analysis_results = get_completed_files(target_dir, checkpoint_folder)
+    
+    if completed_files:
+        print(f"Loading previous progress... {len(completed_files)} files already completed")
+    
+    # Filter out already completed files
+    files_to_process = [f for f in files_to_analyze if f not in completed_files]
+    
+    # Initialize checkpoint if starting fresh
+    if not completed_files:
+        init_checkpoint(target_dir, len(files_to_analyze), config["openai"]["model"], checkpoint_folder)
+    
+    print(f"Found {len(files_to_analyze)} files to analyze ({len(files_to_process)} remaining)")
     
     delay = config["analysis"]["delay_between_requests"]
-    for i, file_path in enumerate(files_to_analyze, 1):
+    for i, file_path in enumerate(files_to_process, 1):
         relative_path = os.path.relpath(file_path, target_dir)
-        print(f"Analyzing file {i}/{len(files_to_analyze)}: {relative_path}")
+        completed_count = len(completed_files)
+        print(f"Analyzing file {completed_count + i}/{len(files_to_analyze)}: {relative_path}")
         
-        analysis_results[file_path] = analyze_file(file_path, prompt)
+        analysis = analyze_file(file_path, prompt)
+        analysis_results[file_path] = analysis
+        
+        # Save checkpoint after each file
+        save_file_result(target_dir, file_path, analysis, checkpoint_folder)
         
         # Add delay to avoid rate limits
         time.sleep(delay)
     
+    # Mark checkpoint as completed
+    mark_completed(target_dir, checkpoint_folder)
+    
     # Compile results
     compile_results(target_dir, file_tree, analysis_results)
+    
+    # Cleanup checkpoint if configured
+    if config["output"].get("cleanup_checkpoint", True):
+        cleanup_checkpoint(target_dir, checkpoint_folder)
 
 
 if __name__ == "__main__":

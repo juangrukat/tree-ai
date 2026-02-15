@@ -2,7 +2,7 @@
   "openai": {
     "model": "gpt-5-nano-2025-08-07",
     "temperature": 1,
-    "max_content_length": 1000,
+    "max_content_length": 1200000,
     "response_format": "json_object"
   },
   "analysis": {
@@ -18,7 +18,9 @@
     "exclude_hidden": true
   },
   "output": {
-    "filename": "file_tree_structure.md"
+    "filename": "file_tree_structure.md",
+    "checkpoint_folder": ".tree-ai",
+    "cleanup_checkpoint": true
   },
   "system_prompt": "You are an AI assistant that analyzes files and provides clear explanations. Your response must include an 'explication' field that summarizes the file's purpose and content. Output Json format."
 }
