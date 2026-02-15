@@ -8,6 +8,7 @@
   "analysis": {
     "prompt_file": "prompt.txt",
     "delay_between_requests": 0.5,
+    "max_concurrent_requests": 5,
     "use_gitignore": true,
     "exclude_files": [
       "file_tree_structure.md"

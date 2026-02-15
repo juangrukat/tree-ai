@@ -19,6 +19,7 @@ tree ai walks through your project directory, generates a visual tree of the fil
 - **Configurable** — Exclude hidden files, specific patterns, or directories
 - **Structured Output** — JSON-formatted AI responses for easy parsing
 - **Rate Limiting** — Configurable delay between API calls to respect limits
+- **Concurrent Processing** — Analyze multiple files simultaneously for faster results
 - **Crash Recovery** — If interrupted, simply re-run the command to resume where you left off
 
 ## Quick Start
@@ -111,6 +112,7 @@ Edit `config.json` to customize behavior:
 | `max_content_length` | Maximum characters to analyze per file |
 | `prompt_file` | File containing the analysis prompt |
 | `delay_between_requests` | Seconds to wait between API calls |
+| `max_concurrent_requests` | Number of concurrent API calls (default: 5) |
 | `use_gitignore` | Whether to respect `.gitignore` patterns |
 | `exclude_files` | Additional files to exclude |
 | `exclude_dirs` | Directories to exclude from traversal |

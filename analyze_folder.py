@@ -15,6 +15,8 @@ import os
 import sys
 import time
 import json
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -187,7 +189,7 @@ def analyze_file(file_path: str, prompt: str) -> dict:
         }
 
 
-def compile_results(start_path: str, file_tree: str, analysis_results: dict):
+def compile_results(start_path: str, file_tree: str, analysis_results: dict, file_order: list = None):
     """Compile all results into file_tree_structure.md"""
     output_path = Path(start_path) / config["output"]["filename"]
     
@@ -207,7 +209,13 @@ def compile_results(start_path: str, file_tree: str, analysis_results: dict):
         # Write file analyses
         f.write("## File\n\n")
         
-        for file_path, analysis in sorted(analysis_results.items()):
+        # Use provided file order if available, otherwise sort alphabetically
+        if file_order:
+            ordered_files = [(fp, analysis_results[fp]) for fp in file_order if fp in analysis_results]
+        else:
+            ordered_files = sorted(analysis_results.items())
+        
+        for file_path, analysis in ordered_files:
             # Get relative path for display
             relative_path = Path(file_path).relative_to(start_path)
             
@@ -284,26 +292,53 @@ def main():
     
     print(f"Found {len(files_to_analyze)} files to analyze ({len(files_to_process)} remaining)")
     
+    # Get concurrency limit from config (default: 5)
+    max_workers = config.get("analysis", {}).get("max_concurrent_requests", 5)
     delay = config["analysis"]["delay_between_requests"]
-    for i, file_path in enumerate(files_to_process, 1):
+    
+    def process_single_file(file_path):
+        """Process a single file and return result with path."""
         relative_path = os.path.relpath(file_path, target_dir)
-        completed_count = len(completed_files)
-        print(f"Analyzing file {completed_count + i}/{len(files_to_analyze)}: {relative_path}")
+        print(f"Analyzing: {relative_path}")
         
         analysis = analyze_file(file_path, prompt)
-        analysis_results[file_path] = analysis
         
-        # Save checkpoint after each file
+        # Save checkpoint after each file (thread-safe)
         save_file_result(target_dir, file_path, analysis, checkpoint_folder)
         
-        # Add delay to avoid rate limits
-        time.sleep(delay)
+        return file_path, analysis
+    
+    # Process files concurrently using ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_file = {
+            executor.submit(process_single_file, file_path): file_path 
+            for file_path in files_to_process
+        }
+        
+        # Collect results as they complete
+        completed_count = len(completed_files)
+        for i, future in enumerate(as_completed(future_to_file), 1):
+            file_path = future_to_file[future]
+            try:
+                file_path, analysis = future.result()
+                analysis_results[file_path] = analysis
+                print(f"Completed {completed_count + i}/{len(files_to_analyze)}: {os.path.relpath(file_path, target_dir)}")
+            except Exception as e:
+                print(f"Error processing {file_path}: {e}")
+                analysis_results[file_path] = {
+                    'explication': f"Error: {str(e)}",
+                    'content': ''
+                }
+            
+            # Add delay between completions to respect rate limits
+            time.sleep(delay)
     
     # Mark checkpoint as completed
     mark_completed(target_dir, checkpoint_folder)
     
-    # Compile results
-    compile_results(target_dir, file_tree, analysis_results)
+    # Compile results (preserve file order from tree walk)
+    compile_results(target_dir, file_tree, analysis_results, files_to_analyze)
     
     # Cleanup checkpoint if configured
     if config["output"].get("cleanup_checkpoint", True):
